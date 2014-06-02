@@ -43,21 +43,90 @@ typedef struct linenoiseCompletions {
   char **cvec;
 } linenoiseCompletions;
 
+/*
+ * The callback type for tab completion handlers.
+ */
 typedef void(linenoiseCompletionCallback)(const char *, linenoiseCompletions *);
-void linenoiseSetCompletionCallback(linenoiseCompletionCallback *);
+
+/*
+ * Sets the current tab completion handler and returns the previous one, or NULL
+ * if no prior one has been set.
+ */
+linenoiseCompletionCallback * linenoiseSetCompletionCallback(linenoiseCompletionCallback *);
+
+/*
+ * Adds a copy of the given string to the given completion list. The copy is owned
+ * by the linenoiseCompletions object.
+ */
 void linenoiseAddCompletion(linenoiseCompletions *, const char *);
 #endif
 
+/*
+ * Prompts for input using the given string as the input
+ * prompt. Returns when the user has tapped ENTER or (on an empty
+ * line) EOF (Ctrl-D on Unix, Ctrl-Z on Windows). Returns either
+ * a copy of the entered string (for ENTER) or NULL (on EOF).  The
+ * caller owns the returned string and must eventually free() it.
+ */
 char *linenoise(const char *prompt);
+
+/*
+ * Activates password entry in future calls of linenoise(), i.e. user
+ * input will not be echoed back to the terminal during entry.
+ */
 void linenoiseSetHidden(int enable);
+
+/*
+ * Activates normal entry in future calls of linenoise(), i.e. user
+ * input will again be echoed back to the terminal during entry.
+ */
 int linenoiseGetHidden(void);
+
+/*
+ * Adds a copy of the given line of the command history.
+ */
 int linenoiseHistoryAdd(const char *line);
+
+/*
+ * Sets the maximum length of the command history, in lines.
+ * If the history is currently longer, it will be trimmed,
+ * retaining only the most recent entries. If len is 0 or less
+ * then this function does nothing.
+ */
 int linenoiseHistorySetMaxLen(int len);
+
+/*
+ * Returns the current maximum length of the history, in lines.
+ */
 int linenoiseHistoryGetMaxLen(void);
+
+/*
+ * Saves the current contents of the history to the given file.
+ * Returns 0 on success.
+ */
 int linenoiseHistorySave(const char *filename);
+
+/*
+ * Replaces the current history with the contents
+ * of the given file.  Returns 0 on success.
+ */
 int linenoiseHistoryLoad(const char *filename);
+
+/*
+ * Frees all history entries, clearing the history.
+ */
 void linenoiseHistoryFree(void);
+
+/*
+ * Returns a pointer to the list of history entries, writing its
+ * length to *len if len is not NULL. The memory is owned by linenoise
+ * and must not be freed.
+ */
 char **linenoiseHistory(int *len);
+
+/*
+ * Returns the number of display columns in the current terminal.
+ */
 int linenoiseColumns(void);
 
 #endif /* __LINENOISE_H */

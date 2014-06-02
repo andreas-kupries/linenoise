@@ -727,6 +727,8 @@ static int fd_read(struct current *current)
                 }
             }
             /* Note that control characters are already translated in AsciiChar */
+            else if (k->wVirtualKeyCode == VK_CONTROL)
+	        continue;
             else {
 #ifdef USE_UTF8
                 return k->uChar.UnicodeChar;
@@ -1122,9 +1124,13 @@ static int completeLine(struct current *current) {
     return c; /* Return last read character */
 }
 
-/* Register a callback function to be called for tab-completion. */
-void linenoiseSetCompletionCallback(linenoiseCompletionCallback *fn) {
+/* Register a callback function to be called for tab-completion.
+   Returns the prior callback so that the caller may (if needed)
+   restore it when done. */
+linenoiseCompletionCallback * linenoiseSetCompletionCallback(linenoiseCompletionCallback *fn) {
+    linenoiseCompletionCallback * old = completionCallback;
     completionCallback = fn;
+    return old;
 }
 
 void linenoiseAddCompletion(linenoiseCompletions *lc, const char *str) {
