@@ -170,6 +170,7 @@ struct current {
     int chars;  /* Number of chars in 'buf' (utf-8 chars) */
     int pos;    /* Cursor position, measured in chars */
     int cols;   /* Size of the window, in chars */
+    int rows;   /* Screen rows */
     const char *prompt;
     char *capture; /* Allocated capture buffer, or NULL for none. Always null terminated */
 #if defined(USE_TERMIOS)
@@ -177,7 +178,6 @@ struct current {
 #elif defined(USE_WINCONSOLE)
     HANDLE outh; /* Console output handle */
     HANDLE inh; /* Console input handle */
-    int rows;   /* Screen rows */
     int x;      /* Current column during output */
     int y;      /* Current row */
 #endif
@@ -440,7 +440,7 @@ static int countColorControlChars(const char* prompt)
  * Stores the current cursor column in '*cols'.
  * Returns 1 if OK, or 0 if failed to determine cursor pos.
  */
-static int queryCursor(int fd, int* cols)
+static int queryCursor(int fd, int* cols, int* rows)
 {
     /* control sequence - report cursor location */
     fd_printf(fd, "\x1b[6n");
@@ -453,7 +453,11 @@ static int queryCursor(int fd, int* cols)
         while (1) {
             int ch = fd_read_char(fd, 100);
             if (ch == ';') {
-                /* Ignore rows */
+                /* Got rows */
+                if (n != 0 && n < 1000) {
+                    *rows = n;
+                }
+		/* Reset accumulator for cols */
                 n = 0;
             }
             else if (ch == 'R') {
@@ -477,7 +481,8 @@ static int queryCursor(int fd, int* cols)
 }
 
 /**
- * Updates current->cols with the current window size (width)
+ * Updates current->cols with the current window size (width),
+ * and     current->rows with the current window rows (height)
  */
 static int getWindowSize(struct current *current)
 {
@@ -485,6 +490,7 @@ static int getWindowSize(struct current *current)
 
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col != 0) {
         current->cols = ws.ws_col;
+        current->rows = ws.ws_row;
         return 0;
     }
 
@@ -496,38 +502,56 @@ static int getWindowSize(struct current *current)
      *
      * In more detail, we:
      * (a) request current cursor position,
-     * (b) move cursor far right,
+     * (b) move cursor far right, far down
      * (c) request cursor position again,
      * (d) at last move back to the old position.
      * This gives us the width without messing with the externally
      * visible cursor position.
+     *
+     * Console codes:
+     * A up
+     * B down
+     * C right
+     * D left
+     *
+     * For portability we are NOT using the control sequences
+     *    ESC [ s
+     *    ESC [ u
+     * to save and restore the cursor position, as many terminal
+     * emulators do not honor them.
      */
 
     if (current->cols == 0) {
-        int here;
+        int herec;
+        int herel;
 
         current->cols = 80;
+	current->rows = 25;
 
         /* (a) */
-        if (queryCursor (current->fd, &here)) {
+        if (queryCursor (current->fd, &herec, &herel)) {
             /* (b) */
-            fd_printf(current->fd, "\x1b[999C");
+            fd_printf(current->fd, "\x1b[999C\x1b[999B");
 
             /* (c). Note: If (a) succeeded, then (c) should as well.
              * For paranoia we still check and have a fallback action
              * for (d) in case of failure..
              */
-            if (!queryCursor (current->fd, &current->cols)) {
+            if (!queryCursor (current->fd, &current->cols, &current->rows)) {
                 /* (d') Unable to get accurate position data, reset
                  * the cursor to the far left. While this may not
                  * restore the exact original position it should not
-                 * be too bad.
+                 * be too bad. We will have lost the vertical position
+		 * however.
                  */
                 fd_printf(current->fd, "\r");
             } else {
                 /* (d) Reset the cursor back to the original location. */
-                if (current->cols > here) {
-                    fd_printf(current->fd, "\x1b[%dD", current->cols - here);
+                if (current->cols > herec) {
+                    fd_printf(current->fd, "\x1b[%dD", current->cols - herec);
+                }
+                if (current->rows > herel) {
+                    fd_printf(current->fd, "\x1b[%dA", current->rows - herel);
                 }
             }
         } /* 1st query failed, doing nothing => default 80 */
@@ -759,6 +783,7 @@ static int getWindowSize(struct current *current)
     current->rows = info.dwSize.Y;
     if (current->cols <= 0 || current->rows <= 0) {
         current->cols = 80;
+        current->rows = 25;
         return -1;
     }
     current->y = info.dwCursorPosition.Y;
@@ -1455,6 +1480,15 @@ int linenoiseColumns(void)
     getWindowSize (&current);
     disableRawMode (&current);
     return current.cols;
+}
+
+int linenoiseLines(void)
+{
+    struct current current;
+    enableRawMode (&current);
+    getWindowSize (&current);
+    disableRawMode (&current);
+    return current.rows;
 }
 
 char *linenoise(const char *prompt)

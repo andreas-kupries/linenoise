@@ -129,4 +129,9 @@ char **linenoiseHistory(int *len);
  */
 int linenoiseColumns(void);
 
+/*
+ * Returns the number of display rows|lines in the current terminal.
+ */
+int linenoiseLines(void);
+
 #endif /* __LINENOISE_H */
