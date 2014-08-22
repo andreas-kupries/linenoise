@@ -160,7 +160,7 @@ static int history_len = 0;
 static char **history = NULL;
 
 /* input mode: hidden vs. regular */
-static int is_hidden = 0;
+static int is_hidden = LN_HIDDEN_NO;
 
 /* Structure to contain the status of the current (being edited) line */
 struct current {
@@ -896,10 +896,10 @@ static void refreshLine(const char *prompt, struct current *current)
         if (pchars + i + n >= current->cols) {
             break;
         }
-        if (is_hidden) {
-            /* In hidden mode all user-entered characters are shown as
-             * astericks ('*'). This is like control chars, except for
-             * a different translation. */
+        if (is_hidden == LN_HIDDEN_STAR) {
+            /* In hidden/star mode all user-entered characters are
+             * shown as astericks ('*'). This is like control chars,
+             * except for a different translation. */
             /* assert (b == 0) */
             outputChars(current, "*", 1);
             buf += w;

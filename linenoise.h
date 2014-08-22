@@ -74,6 +74,9 @@ char *linenoise(const char *prompt);
  * Activates password entry in future calls of linenoise(), i.e. user
  * input will not be echoed back to the terminal during entry.
  */
+#define LN_HIDDEN_NO   (0) /* Fully visible entry.           */
+#define LN_HIDDEN_STAR (1) /* Hidden entry, echoing *'s back */
+#define LN_HIDDEN_ALL  (2) /* Fully hidden, no echo at all   */
 void linenoiseSetHidden(int enable);
 
 /*
