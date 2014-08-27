@@ -159,7 +159,7 @@ static int history_max_len = LINENOISE_DEFAULT_HISTORY_MAX_LEN;
 static int history_len = 0;
 static char **history = NULL;
 
-/* input mode: hidden vs. regular */
+/* input mode: visible (default), vs. hidden (full, stars) */
 static int is_hidden = LN_HIDDEN_NO;
 
 /* Structure to contain the status of the current (being edited) line */
