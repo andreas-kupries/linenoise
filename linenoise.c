@@ -880,52 +880,54 @@ static void refreshLine(const char *prompt, struct current *current)
     cursorToLeft(current);
     outputChars(current, prompt, plen);
 
-    /* Now the current buffer content */
+    /* Now the current buffer content, but only if not fully hidden */
 
-    /* Need special handling for control characters.
-     * If we hit 'cols', stop.
-     */
-    b = 0; /* unwritted bytes */
-    n = 0; /* How many control chars were written */
-    for (i = 0; i < chars; i++) {
-        int ch;
-        int w = utf8_tounicode(buf + b, &ch);
-        if (!is_hidden && ch < ' ') {
-            n++;
-        }
-        if (pchars + i + n >= current->cols) {
-            break;
-        }
-        if (is_hidden == LN_HIDDEN_STAR) {
-            /* In hidden/star mode all user-entered characters are
-             * shown as astericks ('*'). This is like control chars,
-             * except for a different translation. */
-            /* assert (b == 0) */
-            outputChars(current, "*", 1);
-            buf += w;
-            /* keep b = 0; */
-        }
-        else if (ch < ' ') {
-            /* A control character, so write the buffer so far */
-            outputChars(current, buf, b);
-            buf += b + w;
-            b = 0;
-            outputControlChar(current, ch + '@');
-            if (i < pos) {
-                backup++;
-            }
-        }
-        else {
-            b += w;
-        }
+    if (is_hidden != LN_HIDDEN_ALL) {
+        /* Need special handling for control characters.
+	 * If we hit 'cols', stop.
+	 */
+        b = 0; /* unwritted bytes */
+	n = 0; /* How many control chars were written */
+	for (i = 0; i < chars; i++) {
+	    int ch;
+	    int w = utf8_tounicode(buf + b, &ch);
+	    if (!is_hidden && ch < ' ') {
+	        n++;
+	    }
+	    if (pchars + i + n >= current->cols) {
+	        break;
+	    }
+	    if (is_hidden == LN_HIDDEN_STAR) {
+	        /* In hidden/star mode all user-entered characters are
+		 * shown as astericks ('*'). This is like control chars,
+		 * except for a different translation. */
+	        /* assert (b == 0) */
+	        outputChars(current, "*", 1);
+		buf += w;
+		/* keep b = 0; */
+	    }
+	    else if (ch < ' ') {
+	        /* A control character, so write the buffer so far */
+	        outputChars(current, buf, b);
+		buf += b + w;
+		b = 0;
+		outputControlChar(current, ch + '@');
+		if (i < pos) {
+		    backup++;
+		}
+	    }
+	    else {
+	        b += w;
+	    }
+	}
+
+	/* if (is_hidden) assert (b==0) */
+	outputChars(current, buf, b);
+
+	/* Erase to right, move cursor to original position */
+	eraseEol(current);
+	setCursorPos(current, pos + pchars + backup);
     }
-
-    /* if (is_hidden) assert (b==0) */
-    outputChars(current, buf, b);
-
-    /* Erase to right, move cursor to original position */
-    eraseEol(current);
-    setCursorPos(current, pos + pchars + backup);
 }
 
 static void set_current(struct current *current, const char *str)
