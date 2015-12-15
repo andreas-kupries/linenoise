@@ -926,7 +926,12 @@ static void refreshLine(const char *prompt, struct current *current)
 
 	/* Erase to right, move cursor to original position */
 	eraseEol(current);
-	setCursorPos(current, pos + pchars + backup);
+	setCursorPos(current, pchars + pos + backup);
+#if defined(USE_WINCONSOLE)
+    } else {
+        /* Move cursor to the right of the prompt */
+	setCursorPos(current, pchars);
+#endif
     }
 }
 
